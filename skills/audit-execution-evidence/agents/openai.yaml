@@ -1,0 +1,4 @@
+interface:
+  display_name: "Execution Evidence Auditor"
+  short_description: "Audits task execution against evidence"
+  default_prompt: "Use $audit-execution-evidence to audit this execution trace and its artifacts against the declared plan."

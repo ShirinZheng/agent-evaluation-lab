@@ -1,0 +1,4 @@
+interface:
+  display_name: "Execution Plan Designer"
+  short_description: "Builds structured long-horizon execution plans"
+  default_prompt: "Use $design-execution-plan to turn this goal into a validated long-horizon execution plan."

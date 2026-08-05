@@ -1,0 +1,14 @@
+node_modules/
+.venv/
+.env
+.env*.local
+.runtime/
+artifacts/
+reports/*.json
+reports/*.md
+snapshots/*/
+!reports/.gitkeep
+!snapshots/.gitkeep
+.DS_Store
+*.log
+coverage/

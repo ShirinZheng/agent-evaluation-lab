@@ -1,0 +1,49 @@
+{
+  "name": "agent-evaluation-lab",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local-first Langfuse evaluation harness for testing and improving AI skills and agents.",
+  "keywords": [
+    "agent-evaluation",
+    "ai-agents",
+    "langfuse",
+    "llm-evaluation",
+    "codex",
+    "evals",
+    "observability"
+  ],
+  "homepage": "https://github.com/ShirinZheng/agent-evaluation-lab#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ShirinZheng/agent-evaluation-lab.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ShirinZheng/agent-evaluation-lab/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test",
+    "check": "npm run validate:skills && npm run validate:datasets && npm test",
+    "validate:skills": "node runner/validate-skills.mjs",
+    "validate:datasets": "node runner/validate-datasets.mjs",
+    "snapshot": "node runner/snapshot-sut.mjs",
+    "experiment": "node --env-file-if-exists=.env runner/run-experiment.mjs",
+    "experiment:smoke": "node --env-file-if-exists=.env runner/run-experiment.mjs --suite smoke --limit 1",
+    "datasets:sync": "node --env-file-if-exists=.env runner/sync-datasets.mjs",
+    "langfuse:verify": "node --env-file-if-exists=.env runner/verify-langfuse.mjs",
+    "langfuse:bootstrap": "node runtime/langfuse-control.mjs bootstrap",
+    "langfuse:start": "node runtime/langfuse-control.mjs start",
+    "langfuse:status": "node runtime/langfuse-control.mjs status",
+    "langfuse:stop": "node runtime/langfuse-control.mjs stop"
+  },
+  "dependencies": {
+    "@langfuse/client": "^5.10.0",
+    "@langfuse/otel": "^5.10.0",
+    "@langfuse/tracing": "^5.10.0",
+    "@opentelemetry/sdk-trace-node": "^2.10.0",
+    "ajv": "^8.17.1"
+  }
+}
