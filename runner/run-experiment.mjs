@@ -24,7 +24,8 @@ function parseArgs(argv) {
     repeat: 1,
     langfuseMode: process.env.LANGFUSE_MODE || "optional",
     model: process.env.CODEX_MODEL || "",
-    timeoutMs: Number(process.env.CASE_TIMEOUT_MS || 300000)
+    timeoutMs: Number(process.env.CASE_TIMEOUT_MS || 300000),
+    outputRoot: root
   };
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index];
@@ -39,8 +40,9 @@ function parseArgs(argv) {
     else if (value === "--langfuse") result.langfuseMode = next();
     else if (value === "--model") result.model = next();
     else if (value === "--timeout-ms") result.timeoutMs = Number(next());
+    else if (value === "--output-root") result.outputRoot = path.resolve(next());
     else if (value === "--help") {
-      console.log("usage: run-experiment.mjs [--agent planner|auditor|all] [--suite smoke|dev|regression|holdout] [--case id] [--limit n] [--repeat n] [--langfuse off|optional|required] [--model id]");
+      console.log("usage: run-experiment.mjs [--agent planner|auditor|all] [--suite smoke|dev|regression|holdout] [--case id] [--limit n] [--repeat n] [--langfuse off|optional|required] [--model id] [--output-root path]");
       process.exit(0);
     } else throw new Error(`unknown argument: ${value}`);
   }
@@ -86,9 +88,9 @@ const options = parseArgs(process.argv.slice(2));
 const cases = await selectCases(options);
 if (cases.length === 0) throw new Error("no cases selected");
 const id = runId();
-const artifactRoot = path.join(root, "artifacts", id);
+const artifactRoot = path.join(options.outputRoot, "artifacts", id);
 await mkdir(artifactRoot, { recursive: true });
-const snapshot = await createSnapshot({ persist: true });
+const snapshot = await createSnapshot({ persist: true, outputRoot: options.outputRoot });
 const metadata = {
   run_id: id,
   suite: options.suite,
@@ -208,5 +210,5 @@ const report = {
   summary: summarize(itemReports),
   items: itemReports
 };
-const paths = await writeReport(report);
+const paths = await writeReport(report, { outputRoot: options.outputRoot });
 console.log(JSON.stringify({ run_id: id, report: paths, summary: report.summary, langfuse: report.langfuse }, null, 2));
