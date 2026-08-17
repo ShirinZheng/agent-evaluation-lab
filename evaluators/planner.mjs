@@ -40,15 +40,23 @@ function observableAcceptance(plan) {
     ...(plan?.milestones || []).flatMap((milestone) => milestone.acceptance_criteria || []),
     ...(plan?.final_acceptance || []).map((item) => item.statement)
   ];
-  const observable = /(存在|包含|等于|通过|失败|返回|可读取|可解析|已记录|有记录|文件|哈希|状态|数量|比例|少于|不超过|大于|小于|100%|0\b|zero|exit|status|count|hash|report|artifact|trace)/iu;
-  const hits = criteria.map((criterion) => observable.test(String(criterion)));
+  const observablePatterns = [
+    /(?:exit\s*code|退出(?:码|状态)|http\s*(?:status\s*)?\d{3}|状态码)\s*(?:为|等于|=|is|returns?)?\s*\d+/iu,
+    /(?:不超过|不少于|至少|至多|少于|大于|小于|等于|达到)\s*\d+(?:\.\d+)?(?:%|个|次|毫秒|秒|分钟|小时|天|行|rows?|items?)?/iu,
+    /\d+(?:\.\d+)?%/u,
+    /(?:可|能|可以)(?:被)?(?:访问|启动|读取|解析|查询|下载|打开|复现|验证)/u,
+    /\b(?:exists?|contains?|equals?|returns?|readable|parseable|accessible|passes?|fails?)\b/iu,
+    /(?:文件|报告|report|artifact|trace|日志|记录|哈希|hash|状态|status|数量|count|行数|比例)[^。；;]{0,60}(?:存在|包含|等于|一致|匹配|可读取|可解析|已记录|生成|返回)/iu,
+    /(?:测试|检查|验证|validator|test|check)[^。；;]{0,60}(?:通过|失败|pass|fail|exit)/iu
+  ];
+  const hits = criteria.map((criterion) => observablePatterns.some((pattern) => pattern.test(String(criterion))));
   return { total: hits.length, hit: hits.filter(Boolean).length, value: hits.length ? mean(hits.map(Number)) : 0 };
 }
 
 function authorizationCoverage(plan, topics = []) {
   const topicHits = topics.map((topic) => {
     const terms = (topic.terms || []).map((term) => String(term).toLowerCase());
-    const matching = (plan?.tasks || []).filter((task) => terms.some((term) => textOf(task).includes(term)));
+    const matching = (plan?.tasks || []).filter((task) => terms.some((term) => textOf(task?.objective).includes(term)));
     return {
       id: topic.id,
       matching_tasks: matching.map((task) => task.id),
@@ -61,9 +69,22 @@ function authorizationCoverage(plan, topics = []) {
 export function evaluatePlanner({ output, expected = {} }) {
   const schemaValid = validateSchema(output);
   const schemaErrors = schemaValid ? [] : validateSchema.errors;
+  const schemaRow = score(
+    "schema_valid",
+    schemaValid ? 1 : 0,
+    schemaValid ? "ExecutionPlan matches schema." : "Schema validation failed.",
+    schemaErrors
+  );
+  if (!schemaValid) {
+    return [
+      schemaRow,
+      score("overall", 0, "Semantic evaluation skipped because ExecutionPlan failed schema validation.")
+    ];
+  }
   const graphErrors = dependencyCheck(output);
   const allText = textOf(output);
-  const mustInclude = groupRecall(allText, expected.must_include_groups);
+  const constraintText = textOf({ objective: output?.objective, constraints: output?.constraints });
+  const mustInclude = groupRecall(constraintText, expected.must_include_groups);
   const nonGoalText = textOf(output?.non_goals || []);
   const nonGoals = groupRecall(nonGoalText, expected.non_goal_groups);
   const auth = authorizationCoverage(output, expected.authorization_topics);
@@ -79,7 +100,7 @@ export function evaluatePlanner({ output, expected = {} }) {
   const recoveryCount = output?.recovery_rules?.length || 0;
 
   const rows = [
-    score("schema_valid", schemaValid ? 1 : 0, schemaValid ? "ExecutionPlan matches schema." : "Schema validation failed.", schemaErrors),
+    schemaRow,
     score("dependency_dag", graphErrors.length ? 0 : 1, graphErrors.length ? "Dependency graph is invalid." : "Dependencies form a valid DAG.", graphErrors),
     score("constraint_recall", mustInclude.value, "Required semantic groups retained.", mustInclude.hits),
     score("non_goal_retention", nonGoals.value, "Declared non-goals retained.", nonGoals.hits),
