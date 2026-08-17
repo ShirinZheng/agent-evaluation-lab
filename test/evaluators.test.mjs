@@ -80,6 +80,15 @@ test("planner evaluator accepts a contract-valid plan", () => {
   assert.equal(byName(scores, "overall").value, 1);
 });
 
+test("planner evaluator hard-fails schema-invalid output", () => {
+  const plan = validPlan();
+  delete plan.objective;
+  const scores = evaluatePlanner({ output: plan });
+  assert.equal(byName(scores, "schema_valid").value, 0);
+  assert.equal(byName(scores, "overall").value, 0);
+  assert.equal(byName(scores, "dependency_dag"), undefined);
+});
+
 test("planner evaluator rejects dependency cycles", () => {
   const plan = validPlan();
   plan.tasks[0].depends_on = ["T1"];
@@ -99,6 +108,15 @@ test("auditor evaluator accepts evidence-complete report", () => {
   assert.equal(byName(scores, "evidence_reference_validity").value, 1);
   assert.equal(byName(scores, "completion_gate").value, 1);
   assert.equal(byName(scores, "overall").value, 1);
+});
+
+test("auditor evaluator hard-fails schema-invalid output", () => {
+  const report = validAudit();
+  delete report.audit_id;
+  const scores = evaluateAuditor({ input: { evidence: [{ id: "E1" }, { id: "E2" }] }, output: report });
+  assert.equal(byName(scores, "schema_valid").value, 0);
+  assert.equal(byName(scores, "overall").value, 0);
+  assert.equal(byName(scores, "evidence_reference_validity"), undefined);
 });
 
 test("auditor evaluator detects invented evidence references", () => {

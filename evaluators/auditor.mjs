@@ -8,6 +8,19 @@ const validateSchema = ajv.compile(schema);
 
 export function evaluateAuditor({ input, output, expected = {} }) {
   const schemaValid = validateSchema(output);
+  const schemaErrors = schemaValid ? [] : validateSchema.errors;
+  const schemaRow = score(
+    "schema_valid",
+    schemaValid ? 1 : 0,
+    schemaValid ? "AuditReport matches schema." : "Schema validation failed.",
+    schemaErrors
+  );
+  if (!schemaValid) {
+    return [
+      schemaRow,
+      score("overall", 0, "Semantic evaluation skipped because AuditReport failed schema validation.")
+    ];
+  }
   const evidenceIds = new Set((input?.evidence || []).map((item) => item.id));
   const cited = [
     ...(output?.requirement_results || []).flatMap((item) => item.evidence_refs || []),
@@ -32,7 +45,7 @@ export function evaluateAuditor({ input, output, expected = {} }) {
   const verdictHit = !expected.verdicts || expected.verdicts.includes(output?.verdict);
 
   const rows = [
-    score("schema_valid", schemaValid ? 1 : 0, schemaValid ? "AuditReport matches schema." : "Schema validation failed.", schemaValid ? [] : validateSchema.errors),
+    schemaRow,
     score("evidence_reference_validity", invalidRefs.length || positiveWithoutEvidence.length ? 0 : 1, "All citations resolve and verified requirements cite evidence.", { invalid_refs: invalidRefs, verified_without_evidence: positiveWithoutEvidence }),
     score("coverage_consistency", coverageDelta <= 0.000001 ? 1 : 0, `Declared=${output?.requirement_coverage}; calculated=${calculatedCoverage}.`),
     score("requirement_status_accuracy", statusDetails.length ? mean(statusDetails.map((item) => Number(item.hit))) : 1, "Requirement states compared with seeded ground truth.", statusDetails),

@@ -61,6 +61,18 @@ function authorizationCoverage(plan, topics = []) {
 export function evaluatePlanner({ output, expected = {} }) {
   const schemaValid = validateSchema(output);
   const schemaErrors = schemaValid ? [] : validateSchema.errors;
+  const schemaRow = score(
+    "schema_valid",
+    schemaValid ? 1 : 0,
+    schemaValid ? "ExecutionPlan matches schema." : "Schema validation failed.",
+    schemaErrors
+  );
+  if (!schemaValid) {
+    return [
+      schemaRow,
+      score("overall", 0, "Semantic evaluation skipped because ExecutionPlan failed schema validation.")
+    ];
+  }
   const graphErrors = dependencyCheck(output);
   const allText = textOf(output);
   const mustInclude = groupRecall(allText, expected.must_include_groups);
@@ -79,7 +91,7 @@ export function evaluatePlanner({ output, expected = {} }) {
   const recoveryCount = output?.recovery_rules?.length || 0;
 
   const rows = [
-    score("schema_valid", schemaValid ? 1 : 0, schemaValid ? "ExecutionPlan matches schema." : "Schema validation failed.", schemaErrors),
+    schemaRow,
     score("dependency_dag", graphErrors.length ? 0 : 1, graphErrors.length ? "Dependency graph is invalid." : "Dependencies form a valid DAG.", graphErrors),
     score("constraint_recall", mustInclude.value, "Required semantic groups retained.", mustInclude.hits),
     score("non_goal_retention", nonGoals.value, "Declared non-goals retained.", nonGoals.hits),
