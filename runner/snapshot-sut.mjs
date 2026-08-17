@@ -8,7 +8,7 @@ function timestamp() {
   return new Date().toISOString().replace(/[-:]/gu, "").replace(/\.\d{3}Z$/u, "Z");
 }
 
-export async function createSnapshot({ persist = true } = {}) {
+export async function createSnapshot({ persist = true, outputRoot = root } = {}) {
   const objects = {};
   for (const [key, definition] of Object.entries(definitions)) {
     objects[key] = {
@@ -20,7 +20,7 @@ export async function createSnapshot({ persist = true } = {}) {
   const dataset_hash = await hashDirectory(path.join(root, "datasets"));
   const shortHash = hashObject({ objects, evaluator_hash, dataset_hash }).slice(0, 12);
   const snapshotId = `${timestamp()}-${shortHash}`;
-  const directory = path.join(root, "snapshots", snapshotId);
+  const directory = path.join(outputRoot, "snapshots", snapshotId);
   const manifest = {
     schema_version: "1.0.0",
     snapshot_id: snapshotId,

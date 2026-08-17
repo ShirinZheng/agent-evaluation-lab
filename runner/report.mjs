@@ -22,7 +22,12 @@ export function summarize(items) {
   }
   return {
     item_count: items.length,
-    harness_valid: items.length > 0 && items.every((item) => item.process.exit_code === 0 && item.process.parsed && !item.process.timed_out),
+    harness_valid: items.length > 0 && items.every((item) => (
+      item.process.exit_code === 0
+      && item.process.parsed
+      && !item.process.timed_out
+      && item.evaluations.find((score) => score.name === "schema_valid")?.value === 1
+    )),
     successful_processes: items.filter((item) => item.process.exit_code === 0 && !item.process.timed_out).length,
     parsed_outputs: items.filter((item) => item.process.parsed).length,
     averages,
@@ -61,8 +66,8 @@ function markdown(report) {
   return `${lines.join("\n")}\n`;
 }
 
-export async function writeReport(report) {
-  const reportsDirectory = path.join(root, "reports");
+export async function writeReport(report, { outputRoot = root } = {}) {
+  const reportsDirectory = path.join(outputRoot, "reports");
   await mkdir(reportsDirectory, { recursive: true });
   const jsonPath = path.join(reportsDirectory, `${report.run_id}.json`);
   const markdownPath = path.join(reportsDirectory, `${report.run_id}.md`);
